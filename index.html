@@ -160,6 +160,7 @@
     <div class="ban" id="banner"></div><div class="rope"></div>
     <svg class="tf" viewBox="0 0 60 30" width="58" style="overflow:visible"><path class="tail" d="M20 15L2 3L7 15L2 27Z" fill="#ffb347" opacity=".85"/><path d="M16 15C24 2 47 2 58 15C47 28 24 28 16 15Z" fill="#ffb347"/><path d="M26 6Q34 0 40 6" fill="#ff9a1f"/><circle cx="50" cy="13" r="2.2" fill="#fff"/><circle cx="50.6" cy="13" r="1" fill="#023"/></svg>
   </div></div></div>
+  <h1 class="hello">Hello fam,</h1>
   <img class="logo" src="logo.jpg" alt="Shastha Guppy Farm logo" onclick="logoTap()">
   <button class="adm" id="logoEdit" onclick="editLogo()">✏️ Edit logo</button>
   <h1 class="welcome">Welcome to Shastha Guppy Farm</h1>
@@ -187,7 +188,7 @@
 <!-- LIST -->
 <div id="list" class="screen">
   <header>
-    <button class="back" onclick="show('categories')">← Back</button>
+    <button class="back" onclick="goBack('categories')">← Back</button>
     <h2 id="listTitle"></h2>
     <button class="cartbtn" onclick="show('cart')">🛒<span class="badge cartcount">0</span></button>
   </header>
@@ -197,7 +198,7 @@
 <!-- CART -->
 <div id="cart" class="screen">
   <header>
-    <button class="back" onclick="show('categories')">← Back</button>
+    <button class="back" onclick="goBack('categories')">← Back</button>
     <h2>Your Cart</h2>
     <span></span>
   </header>
@@ -227,7 +228,7 @@
 
 <!-- COMBO OFFER -->
 <div id="combo" class="screen">
-  <header><button class="back" onclick="show('home')">← Back</button><h2>🎉 Combo Offer</h2><span></span></header>
+  <header><button class="back" onclick="goBack('home')">← Back</button><h2>🎉 Combo Offer</h2><span></span></header>
   <div class="cart-wrap" id="comboBody"></div>
 </div>
 
@@ -285,12 +286,28 @@ let all = [];
 const rebuild = () => { all = Object.entries(PRODUCTS).flatMap(([type,list])=>list.map(p=>({...p,type}))); }; rebuild();
 const find = id => all.find(p=>p.id===id);
 
-function show(id){
+let curScreen="home";
+function show(id,fromPop){
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
   if(id==="cart") renderCart();
   window.scrollTo(0,0);
+  if(!fromPop && id!==curScreen) history.pushState({s:id,cur:current,did:detailId,dm:detailMode},"");
+  curScreen=id;
 }
+function goBack(fallback){
+  if(history.state && history.state.s && history.state.s!=="home") history.back();
+  else show(fallback);
+}
+window.addEventListener("popstate",e=>{
+  const st=e.state||{s:"home"};
+  closeModal();
+  if(st.s==="list"){current=st.cur||current;document.getElementById("listTitle").textContent=TITLES[current]||"";renderGrid();}
+  else if(st.s==="detail"){detailId=st.did;detailMode=st.dm||"shop";detailQty=1;renderDetail();}
+  else if(st.s==="combo"){if(!isLive(OFFER)){show("home",true);return;}renderCombo();}
+  show(st.s,true);
+});
+history.replaceState({s:"home"},"");
 let CATS=[{k:"guppy",label:"Guppies",icon:"🐠",title:"Guppy Varieties"},{k:"otherfish",label:"Other Fishes",icon:"🐟",title:"Other Fishes"},{k:"food",label:"Foods",icon:"🍤",title:"Fish Foods"},{k:"medicine",label:"Medicines",icon:"💊",title:"Medicines"},{k:"accessory",label:"Accessories",icon:"🧰",title:"Accessories"}];
 const CAT_TAG={soon:"Coming soon",unavailable:"Currently unavailable"};
 function syncCats(){
@@ -326,7 +343,11 @@ function renderGrid(){
 }
 let detailId=null, detailQty=1, detailMode="shop";
 function openDetail(id,mode){detailId=id;detailMode=mode||"shop";detailQty=1;renderDetail();show("detail");}
-function detailBack(){if(detailMode==="shop"){renderGrid();show("list");}else{renderCombo();show("combo");}}
+function detailBack(){
+  if(history.state&&history.state.s==="detail") history.back();
+  else if(detailMode==="shop"){renderGrid();show("list");}
+  else{renderCombo();show("combo");}
+}
 const comboLeft=()=>Math.max(0,+OFFER.count-comboCount());
 function dQty(d){const max=detailMode==="cpick"?Math.max(1,comboLeft()):99;detailQty=Math.min(max,Math.max(1,detailQty+d));document.getElementById("dq").textContent=detailQty;}
 function addToCart(){
@@ -339,7 +360,8 @@ function addToCombo(){
   const p=find(detailId); if(!p||p.out) return;
   const left=comboLeft(); if(left<=0){toast("Combo is full");return;}
   comboSel[p.id]=(comboSel[p.id]||0)+Math.min(detailQty,left);
-  toast(`Added to combo ✓ (${comboCount()}/${OFFER.count})`); renderCombo(); show("combo");
+  toast(`Added to combo ✓ (${comboCount()}/${OFFER.count})`); renderCombo();
+  if(history.state&&history.state.s==="detail") history.back(); else show("combo");
 }
 function renderDetail(){
   const p=find(detailId); if(!p){detailBack();return;}
