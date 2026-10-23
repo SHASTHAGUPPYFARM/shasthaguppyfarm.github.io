@@ -8,7 +8,7 @@
   :root{--card:rgba(6,50,75,.55);--accent:#19c3b1;--text:#eafcff;--muted:#cdeaf2;--warn:#ffb347}
   *{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,Segoe UI,Arial,sans-serif}
   body{background:#0f78b8;color:var(--text);min-height:100vh}
-
+ 
   /* ===== UNDERWATER SCENE (all code, no images) ===== */
   #sea{position:fixed;inset:0;overflow:hidden;z-index:0;pointer-events:none;
     background:linear-gradient(180deg,#7fe0f5 0%,#27a4dc 18%,#0f78b8 50%,#08507f 80%,#053553 100%)}
@@ -24,11 +24,11 @@
   @keyframes caus{from{transform:translateX(-4%) scaleY(1)}to{transform:translateX(4%) scaleY(1.2)}}
   .floor{position:absolute;left:0;right:0;bottom:0;height:9vh;background:linear-gradient(transparent,#07304a 70%)}
   .rock{position:absolute;bottom:-2vh;background:#1c4560;border-radius:50% 50% 0 0}
-
+ 
   /* plants */
   .blade{position:absolute;bottom:0;transform-origin:50% 100%;animation:sway var(--d) ease-in-out infinite alternate;animation-delay:var(--dl)}
   @keyframes sway{from{transform:rotate(-5deg) skewX(-4deg)}to{transform:rotate(5deg) skewX(4deg)}}
-
+ 
   /* jellyfish: float upwards */
   .jelly{position:absolute;bottom:-220px;animation:jrise var(--t) linear infinite;animation-delay:var(--dl)}
   @keyframes jrise{0%{transform:translate(0,0)}25%{transform:translate(25px,-33vh)}50%{transform:translate(-20px,-66vh)}75%{transform:translate(25px,-99vh)}100%{transform:translate(0,-135vh)}}
@@ -38,7 +38,7 @@
   @keyframes pulse{0%,100%{transform:scale(1.05,.88)}50%{transform:scale(.94,1.08)}}
   .tent{transform-box:fill-box;transform-origin:50% 0;animation:wave 2.4s ease-in-out infinite alternate}
   @keyframes wave{from{transform:skewX(-7deg) scaleY(.92)}to{transform:skewX(7deg) scaleY(1.06)}}
-
+ 
   /* fish schools: always swim head-first */
   .school{position:absolute;left:0;animation:var(--dir) var(--t) linear infinite;animation-delay:var(--dl)}
   @keyframes swimR{from{transform:translateX(-320px)}to{transform:translateX(calc(100vw + 120px))}}
@@ -49,13 +49,13 @@
   @keyframes fbob{from{margin-top:-3px}to{margin-top:3px}}
   .tail{transform-box:fill-box;transform-origin:100% 50%;animation:wag .35s ease-in-out infinite alternate}
   @keyframes wag{from{transform:rotate(-16deg)}to{transform:rotate(16deg)}}
-
+ 
   /* bubbles */
   .bub{position:absolute;bottom:-30px;border-radius:50%;border:1px solid rgba(255,255,255,.7);
     background:radial-gradient(circle at 30% 30%,rgba(255,255,255,.55),rgba(255,255,255,.05));animation:rise linear infinite}
   @keyframes rise{0%{transform:translate(0,0);opacity:0}10%{opacity:1}30%{transform:translate(14px,-30vh)}60%{transform:translate(-12px,-65vh)}100%{transform:translate(8px,-112vh);opacity:.2}}
   @media (prefers-reduced-motion:reduce){#sea *{animation:none!important}}
-
+ 
   /* ===== PAGES ===== */
   .screen{display:none;min-height:100vh;padding:20px;position:relative;z-index:1;text-shadow:0 1px 6px rgba(0,40,70,.6)}
   .screen.active{display:block}
@@ -134,10 +134,10 @@
 </style>
 </head>
 <body>
-
+ 
 <div id="adminbar"><span>🔧 Admin mode</span><button onclick="openPanel()">📋 Pick page / item</button><button onclick="editItem(null)">➕ Add item</button><button onclick="editOffer()">🎁 Combo offer</button><button onclick="logout()">Logout</button></div>
 <div id="modal" class="modal"><div class="mbox" id="mbox"></div></div>
-
+ 
 <!-- UNDERWATER BACKGROUND (built by script at the bottom) -->
 <div id="sea">
   <svg width="0" height="0" style="position:absolute"><defs>
@@ -153,7 +153,7 @@
   <div id="plants"></div>
   <div id="bubbles"></div>
 </div>
-
+ 
 <!-- HOME -->
 <div id="home" class="screen active">
   <div class="lane" id="offerLane"><div class="tow" onclick="openCombo()"><div class="tow-in">
@@ -173,7 +173,7 @@
       <svg viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="3.5" fill="none" stroke="#fff" stroke-width="2"/><path d="M10 9.2l5 2.8-5 2.8z" fill="#fff"/></svg></a>
   </div>
 </div>
-
+ 
 <!-- CATEGORIES -->
 <div id="categories" class="screen">
   <header>
@@ -183,7 +183,7 @@
   </header>
   <div class="boxes" id="cats"></div>
 </div>
-
+ 
 <!-- LIST -->
 <div id="list" class="screen">
   <header>
@@ -193,7 +193,7 @@
   </header>
   <div class="grid" id="grid"></div>
 </div>
-
+ 
 <!-- CART -->
 <div id="cart" class="screen">
   <header>
@@ -217,20 +217,20 @@
     <button id="sendBtn" onclick="sendOrder()">Send order on WhatsApp</button>
   </div>
 </div>
-
+ 
 <!-- PRODUCT DETAIL -->
 <div id="detail" class="screen">
   <header><button class="back" onclick="detailBack()">← Back</button><h2 id="dTitle"></h2>
     <button class="cartbtn" onclick="show('cart')">🛒<span class="badge cartcount">0</span></button></header>
   <div id="dBody"></div>
 </div>
-
+ 
 <!-- COMBO OFFER -->
 <div id="combo" class="screen">
   <header><button class="back" onclick="goBack('home')">← Back</button><h2>🎉 Combo Offer</h2><span></span></header>
   <div class="cart-wrap" id="comboBody"></div>
 </div>
-
+ 
 <script>
 // ====== EDIT THESE ======
 const WHATSAPP_NUMBER = "918088820799";
@@ -276,7 +276,7 @@ let PRODUCTS = {
   ]
 };
 // ========================
-
+ 
 let cart = {}, current = "guppy", comboCart = null;
 const TITLES = {guppy:"Guppy Varieties", otherfish:"Other Fishes", food:"Fish Foods", medicine:"Medicines", accessory:"Accessories"};
 const EMOJI = {guppy:"🐠", otherfish:"🐟", food:"🍤", medicine:"💊", accessory:"🧰"};
@@ -284,29 +284,51 @@ const DEFAULTS = JSON.parse(JSON.stringify(PRODUCTS));
 let all = [];
 const rebuild = () => { all = Object.entries(PRODUCTS).flatMap(([type,list])=>list.map(p=>({...p,type}))); }; rebuild();
 const find = id => all.find(p=>p.id===id);
-
+ 
+/* ====== NAVIGATION + PHONE BACK BUTTON ======
+   Every page change adds a real history entry (with its own #hash), so the phone's
+   back button / swipe-back goes to the page you were on before, not the welcome page. */
+let detailId=null, detailQty=1, detailMode="shop";
 let curScreen="home";
+function navState(id){return {sgf:1,s:id,cur:current,did:detailId,dm:detailMode};}
 function show(id,fromPop){
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
   if(id==="cart") renderCart();
   window.scrollTo(0,0);
-  if(!fromPop && id!==curScreen) history.pushState({s:id,cur:current,did:detailId,dm:detailMode},"");
+  if(!fromPop && id!==curScreen){
+    try{ history.pushState(navState(id),"","#"+id); }
+    catch(e){ try{ history.pushState(navState(id),""); }catch(e2){} }
+  }
   curScreen=id;
 }
 function goBack(fallback){
-  if(history.state && history.state.s && history.state.s!=="home") history.back();
+  // Same as pressing the phone's back button
+  if(history.state && history.state.sgf && history.state.s!=="home") history.back();
   else show(fallback);
 }
 window.addEventListener("popstate",e=>{
-  const st=e.state||{s:"home"};
+  const st=(e.state&&e.state.sgf)?e.state:{s:"home"};
   closeModal();
-  if(st.s==="list"){current=st.cur||current;document.getElementById("listTitle").textContent=TITLES[current]||"";renderGrid();}
-  else if(st.s==="detail"){detailId=st.did;detailMode=st.dm||"shop";detailQty=1;renderDetail();}
-  else if(st.s==="combo"){if(!isLive(OFFER)){show("home",true);return;}renderCombo();}
+  if(st.s==="list"){
+    current=st.cur||current;
+    document.getElementById("listTitle").textContent=TITLES[current]||"";
+    renderGrid();
+  }
+  else if(st.s==="detail"){
+    detailId=st.did;detailMode=st.dm||"shop";detailQty=1;
+    if(!find(detailId)){ show("categories",true); return; }
+    renderDetail();
+  }
+  else if(st.s==="combo"){
+    if(!isLive(OFFER)){show("home",true);return;}
+    renderCombo();
+  }
   show(st.s,true);
 });
-history.replaceState({s:"home"},"");
+// the page you first land on is the "home" history entry (keeps #admin / #setup links working)
+history.replaceState({sgf:1,s:"home"},"");
+ 
 let CATS=[{k:"guppy",label:"Guppies",icon:"🐠",title:"Guppy Varieties"},{k:"otherfish",label:"Other Fishes",icon:"🐟",title:"Other Fishes"},{k:"food",label:"Foods",icon:"🍤",title:"Fish Foods"},{k:"medicine",label:"Medicines",icon:"💊",title:"Medicines"},{k:"accessory",label:"Accessories",icon:"🧰",title:"Accessories"}];
 const CAT_TAG={soon:"Coming soon",unavailable:"Currently unavailable"};
 function syncCats(){
@@ -340,10 +362,9 @@ function renderGrid(){
       </div></div>`;
   }).join("");
 }
-let detailId=null, detailQty=1, detailMode="shop";
 function openDetail(id,mode){detailId=id;detailMode=mode||"shop";detailQty=1;renderDetail();show("detail");}
 function detailBack(){
-  if(history.state&&history.state.s==="detail") history.back();
+  if(history.state&&history.state.sgf&&history.state.s==="detail") history.back();
   else if(detailMode==="shop"){renderGrid();show("list");}
   else{renderCombo();show("combo");}
 }
@@ -360,7 +381,7 @@ function addToCombo(){
   const left=comboLeft(); if(left<=0){toast("Combo is full");return;}
   comboSel[p.id]=(comboSel[p.id]||0)+Math.min(detailQty,left);
   toast(`Added to combo ✓ (${comboCount()}/${OFFER.count})`); renderCombo();
-  if(history.state&&history.state.s==="detail") history.back(); else show("combo");
+  if(history.state&&history.state.sgf&&history.state.s==="detail") history.back(); else show("combo");
 }
 function renderDetail(){
   const p=find(detailId); if(!p){detailBack();return;}
@@ -395,7 +416,7 @@ function updateBadge(){
 }
 const pairs = () => Object.entries(cart).reduce((s,[id,q])=>s+(find(id).type==="guppy"?q:0),0);
 const total = () => Object.entries(cart).reduce((s,[id,q])=>s+find(id).price*q,0) + (comboCart?comboCart.price:0);
-
+ 
 function editCat(k){
   const c=k?CATS.find(x=>x.k===k):{label:"",icon:"🐟"}, v=k?(CATSTAT[k]||""):"";
   modal(`<h3>${k?"Edit section":"Add section"}</h3>
@@ -495,11 +516,11 @@ function sendOrder(){
   msg += `\nTotal: ₹${total()}\n\n*Customer details*\nName: ${name}\nAddress: ${addr}\nPhone: ${phone}\nPincode: ${pin}\n\nPlease confirm availability and delivery details.`;
   window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`,"_blank");
 }
-
+ 
 // ====== UNDERWATER SCENE BUILDER ======
 const R = (a,b)=>a+Math.random()*(b-a);
 const $ = id=>document.getElementById(id);
-
+ 
 // Jellyfish – drift upwards
 for(let i=0;i<5;i++){
   const w=R(55,110), d=document.createElement("div");
@@ -511,7 +532,7 @@ for(let i=0;i<5;i++){
     <ellipse cx="30" cy="20" rx="14" ry="6" fill="#fff" opacity=".35"/></g></svg>`;
   $("jellies").appendChild(d);
 }
-
+ 
 // Fish schools – 4-5 fish swim together, head-first
 const SCHOOLS=[
   {y:16,w:34,dir:1, t:26,dl:-4, c:"#ffb347",n:5},
@@ -536,7 +557,7 @@ SCHOOLS.forEach(s=>{
   sc.innerHTML=`<div class="sin">${h}</div>`;
   $("schools").appendChild(sc);
 });
-
+ 
 // Swaying plants (bottom left, right and middle)
 const GREENS=["#2f8f5b","#3aa56a","#1f7a52","#4fb27a","#2a6f4e","#6cc08a"];
 function plant(leftPct,count,spread){
@@ -551,7 +572,7 @@ function plant(leftPct,count,spread){
   }
 }
 plant(3,8,40); plant(90,7,34); plant(48,4,60);
-
+ 
 // Bubbles
 for(let i=0;i<24;i++){
   const e=document.createElement("div"), z=R(6,22);
@@ -559,7 +580,7 @@ for(let i=0;i<24;i++){
   e.style.cssText=`left:${R(0,100)}%;width:${z}px;height:${z}px;animation-duration:${R(9,21)}s;animation-delay:-${R(0,20)}s`;
   $("bubbles").appendChild(e);
 }
-
+ 
 // ====== ADMIN (hidden: open yoursite/#admin or tap the home logo 5 times) ======
 // Edits are saved into your own GitHub repo (data.json + media folder) using your private key.
 let admin=false, taps=0, tapT, OFFER=null, CATSTAT={}, LOGO="", LOGOLOCAL="";
