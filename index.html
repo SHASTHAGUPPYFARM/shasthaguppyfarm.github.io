@@ -68,6 +68,14 @@
   button:disabled{background:#476a75;color:#9db;cursor:not-allowed}
   header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:10px}
   header h2{font-size:1.25rem}
+  .sbar,.stick{position:sticky;top:0;z-index:15;margin:0 -20px 16px;padding:10px 20px;background:#0b4f7c;box-shadow:0 4px 12px rgba(0,0,0,.28);transform:translateZ(0);-webkit-transform:translateZ(0)}
+  .stick{padding-bottom:12px}
+  .stick header{margin:0}
+  .stick .ptitle{margin-bottom:8px}
+  body.admin .sbar,body.admin .stick{top:76px}
+  .sbar .back{font-size:1.3rem;padding:8px 14px;line-height:1}
+  .sbar input[type=search]{flex:1;min-width:0;padding:11px 16px;border-radius:22px;border:none;font-size:1rem;background:#fff;color:#04202b;text-shadow:none}
+  .ptitle{text-align:center;font-size:1.4rem;margin-bottom:12px}
   .back{background:rgba(6,50,75,.45);color:var(--text);padding:8px 12px;border:1px solid var(--muted)}
   .cartbtn{position:relative;background:var(--card);color:var(--text);padding:10px 14px}
   .badge{position:absolute;top:-6px;right:-6px;background:#ff4d6d;color:#fff;border-radius:50%;min-width:22px;height:22px;font-size:.8rem;display:flex;align-items:center;justify-content:center}
@@ -178,7 +186,7 @@
 
 <!-- CATEGORIES -->
 <div id="categories" class="screen">
-  <header>
+  <header class="sbar">
     <img class="mini-logo" src="logo.jpg" alt="Shastha Guppy Farm" onclick="show('home')">
     <h2>What do you need?</h2>
     <button class="cartbtn" onclick="show('cart')">🛒<span class="badge cartcount">0</span></button>
@@ -188,18 +196,21 @@
 
 <!-- LIST -->
 <div id="list" class="screen">
-  <header>
-    <button class="back" onclick="goBack('categories')">← Back</button>
-    <h2 id="listTitle"></h2>
-    <button class="cartbtn" onclick="show('cart')">🛒<span class="badge cartcount">0</span></button>
-  </header>
+  <div class="stick">
+    <h2 id="listTitle" class="ptitle"></h2>
+    <header>
+      <button class="back" aria-label="Back" onclick="goBack('categories')">←</button>
+      <input id="srch" type="search" placeholder="🔍 Search" oninput="renderGrid()" autocomplete="off">
+      <button class="cartbtn" onclick="show('cart')">🛒<span class="badge cartcount">0</span></button>
+    </header>
+  </div>
   <div class="grid" id="grid"></div>
 </div>
 
 <!-- CART -->
 <div id="cart" class="screen">
-  <header>
-    <button class="back" onclick="goBack('categories')">← Back</button>
+  <header class="sbar">
+    <button class="back" aria-label="Back" onclick="goBack('categories')">←</button>
     <h2>Your Cart</h2>
     <span></span>
   </header>
@@ -222,14 +233,14 @@
 
 <!-- PRODUCT DETAIL -->
 <div id="detail" class="screen">
-  <header><button class="back" onclick="detailBack()">← Back</button><h2 id="dTitle"></h2>
+  <header class="sbar"><button class="back" aria-label="Back" onclick="detailBack()">←</button><h2 id="dTitle"></h2>
     <button class="cartbtn" onclick="show('cart')">🛒<span class="badge cartcount">0</span></button></header>
   <div id="dBody"></div>
 </div>
 
 <!-- COMBO OFFER -->
 <div id="combo" class="screen">
-  <header><button class="back" onclick="goBack('home')">← Back</button><h2>🎉 Combo Offer</h2><span></span></header>
+  <header class="sbar"><button class="back" aria-label="Back" onclick="goBack('home')">←</button><h2>🎉 Combo Offer</h2><span></span></header>
   <div class="cart-wrap" id="comboBody"></div>
 </div>
 
@@ -237,6 +248,7 @@
 // ====== EDIT THESE ======
 const WHATSAPP_NUMBER = "918088820799";
 const MIN_PAIRS = 3;
+const DELIVERY_CHARGE = 250; // per kg, used for the delivery-discount offer
 let PRODUCTS = {
   guppy: [
     {id:"g1", name:"Red Dragon Guppy",    price:150, unit:"pair", image:""},
@@ -292,7 +304,7 @@ function show(id,fromPop){
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
   if(id==="cart") renderCart();
-  window.scrollTo(0,0);
+  window.scrollTo({top:0,left:0,behavior:"instant"});
   if(!fromPop && id!==curScreen) history.pushState({s:id,cur:current,did:detailId,dm:detailMode},"");
   curScreen=id;
 }
@@ -326,7 +338,7 @@ function openList(type){
   const c=CATS.find(x=>x.k===type); if(!c) return;
   if(CATSTAT[type]&&!admin){toast(c.label+(CATSTAT[type]==="soon"?" – coming soon!":" – currently unavailable"));return;}
   current = type;
-  document.getElementById("listTitle").textContent = TITLES[type];
+  document.getElementById("listTitle").textContent = TITLES[type]; g("srch").value="";
   renderGrid(); show("list");
 }
 function mediaHTML(p,type){
@@ -335,12 +347,13 @@ function mediaHTML(p,type){
   return EMOJI[type];
 }
 function renderGrid(){
-  document.getElementById("grid").innerHTML = PRODUCTS[current].map(p=>{
+  const qs=((document.getElementById("srch")||{}).value||"").trim().toLowerCase();
+  document.getElementById("grid").innerHTML = PRODUCTS[current].filter(p=>!qs||p.name.toLowerCase().includes(qs)).map(p=>{
     const adm = admin ? `<button class="adm" onclick="event.stopPropagation();editItem('${p.id}')">✏️ Edit</button><button class="adm" onclick="event.stopPropagation();toggleStock('${p.id}')">${p.out?"Mark in stock":"Mark out of stock"}</button>` : "";
     return `<div class="card${p.out?" oos":""}" onclick="openDetail('${p.id}')">${p.out?'<div class="oos-tag">Out of stock</div>':""}<div class="img">${mediaHTML(p,current)}</div><div class="info">
         <strong>${esc(p.name)}</strong><span class="price">${priceHTML({...p,type:current})}</span>${adm}
       </div></div>`;
-  }).join("");
+  }).join("")||`<p class="sub" style="text-align:center;grid-column:1/-1;margin:30px">No items found.</p>`;
 }
 let detailId=null, detailQty=1, detailMode="shop";
 function openDetail(id,mode){detailId=id;detailMode=mode||"shop";detailQty=1;renderDetail();show("detail");}
@@ -472,14 +485,20 @@ function renderCart(){
   }).join("");
   const bn=bonus();
   if(bn){
-    if(bn.hit){
-      const opts=giftOpts(OFFER);
+    if(bn.hit&&bn.hit.free>0){
+      const opts=giftOpts(OFFER,bn.hit);
       freePick.length=bn.hit.free;
       for(let i=0;i<bn.hit.free;i++) if(!opts.find(x=>x.k===freePick[i])) freePick[i]=opts.length?opts[0].k:"";
       const sel=opts.length?Array.from({length:bn.hit.free},(_,i)=>`<select onchange="freePick[${i}]=this.value" style="padding:10px;border-radius:8px;border:none;font-size:1rem;width:100%">${opts.map(x=>`<option value="${esc(x.k)}"${freePick[i]===x.k?" selected":""}>${esc(x.label)}</option>`).join("")}</select>`).join(""):`<small>Free gift chosen by the farm</small>`;
       h+=`<div class="row" style="flex-direction:column;align-items:stretch;gap:8px"><strong>🎁 FREE: ${bn.hit.free} pair${bn.hit.free>1?"s":""} (Buy ${bn.hit.buy}+ offer)</strong>${opts.length?`<small>Choose your free gift:</small>`:""}${sel}</div>`;
     }
-    if(bn.next) h+=`<div class="row"><small>💡 Add ${bn.next.buy-bn.n} more pair(s) to get ${bn.next.free} pair${bn.next.free>1?"s":""} FREE!</small></div>`;
+    if(bn.hit&&bn.hit.del>0) h+=`<div class="row" style="flex-direction:column;align-items:flex-start;gap:4px"><strong>🚚 Delivery discount: ${bn.hit.del}% OFF</strong><small>Delivery charge per kg: <s>₹${DELIVERY_CHARGE}</s> <b>₹${dcharge(bn.hit.del)}</b></small></div>`;
+    if(bn.next){
+      const parts=[];
+      if(bn.next.free>0) parts.push(`${bn.next.free} pair${bn.next.free>1?"s":""} FREE`);
+      if(bn.next.del>0) parts.push(`${bn.next.del}% off delivery`);
+      h+=`<div class="row"><small>💡 Add ${bn.next.buy-bn.n} more pair(s) to get ${parts.join(" + ")}!</small></div>`;
+    }
   }
   box.innerHTML=h;
   document.getElementById("total").textContent="Total: ₹"+total();
@@ -506,7 +525,10 @@ function sendOrder(){
   }
   Object.entries(cart).forEach(([id,q])=>{const p=find(id); msg += `• ${p.name} – ${q} ${p.unit}${q>1?"s":""} (₹${unit(p)*q})\n`;});
   const fl=freeLines();
-  if(fl) msg+=`\n🎁 *FREE (Buy ${fl.hit.buy} offer):*\n`+(fl.lines.length?fl.lines.map(x=>`• 1 pair – ${x}`).join("\n"):`• ${fl.hit.free} pair${fl.hit.free>1?"s":""} (chosen by the farm)`)+"\n";
+  if(fl){
+    if(fl.hit.free>0) msg+=`\n🎁 *FREE (Buy ${fl.hit.buy} offer):*\n`+(fl.lines.length?fl.lines.map(x=>`• 1 pair – ${x}`).join("\n"):`• ${fl.hit.free} pair${fl.hit.free>1?"s":""} (chosen by the farm)`)+"\n";
+    if(fl.hit.del>0) msg+=`\n🚚 *Delivery discount:* ${fl.hit.del}% off (₹${dcharge(fl.hit.del)} per kg instead of ₹${DELIVERY_CHARGE})\n`;
+  }
   msg += `\nTotal: ₹${total()}\n\n*Customer details*\nName: ${name}\nAddress: ${addr}\nPhone: ${phone}\nPincode: ${pin}\n\nPlease confirm availability and delivery details.`;
   window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`,"_blank");
 }
@@ -701,12 +723,14 @@ const unit=p=>pctApplies(p)?Math.round(p.price*(100-(+OFFER.pct))/100):p.price;
 const priceHTML=p=>{const d=unit(p);return d<p.price?`<s style="opacity:.7">₹${p.price}</s> <b style="color:#7ff5e6">₹${d}</b> / ${p.unit} <small>(${OFFER.pct}% off)</small>`:`₹${p.price} / ${p.unit}`;};
 const offerRow=(x,k)=>`<div onclick="openDetail('${x.id}')" style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.15);cursor:pointer"><span>${esc(x.name)}</span><span style="text-align:right">${priceHTML({...x,type:k})}</span></div>`;
 const tiersOf=o=>(o.tiers||[]).slice().sort((a,b)=>a.buy-b.buy);
+const tierText=t=>`Buy ${t.buy}`+(t.free>0?` get ${t.free} free`:"")+(t.del>0?`${t.free>0?" +":" get"} ${t.del}% off delivery`:"");
+const dcharge=d=>Math.round(DELIVERY_CHARGE*(100-d)/100);
 const buyElig=(o,p)=>o.scope==="all"||o.scope===p.type||(o.scope==="items"&&(o.buyIds||[]).includes(p.id));
-const giftOpts=o=>[...(o.giftIds||[]).map(id=>find(id)).filter(p=>p&&!p.out).map(p=>({k:"id:"+p.id,label:p.name})),...(o.giftText||"").split("\n").map(x=>x.trim()).filter(Boolean).map(x=>({k:"t:"+x,label:x}))];
+const giftOpts=(o,t)=>{const has=t&&((t.gifts||[]).length||(t.text||"").trim());const ids=has?(t.gifts||[]):(o.giftIds||[]),txt=has?(t.text||""):(o.giftText||"");return [...ids.map(id=>find(id)).filter(p=>p&&!p.out).map(p=>({k:"id:"+p.id,label:p.name})),...txt.split("\n").map(x=>x.trim()).filter(Boolean).map(x=>({k:"t:"+x,label:x}))];};
 let freePick=[];
 function freeLines(){
   const b=bonus(); if(!b||!b.hit) return null;
-  const opts=giftOpts(OFFER);
+  const opts=giftOpts(OFFER,b.hit);
   const lines=opts.length?Array.from({length:b.hit.free},(_,i)=>{const k=freePick[i]||opts[0].k;return (opts.find(x=>x.k===k)||opts[0]).label;}):[];
   return {hit:b.hit,lines};
 }
@@ -719,7 +743,7 @@ function bonus(){
 }
 const qlab=(p,q)=>`${q} ${p.unit}${q>1?"s":""}`;
 const scopeText=o=>o.scope==="all"?"everything":o.scope==="items"?"selected items":((CATS.find(c=>c.k===o.scope)||{}).label||"selected items");
-const offerTitle=o=>o.type==="free"?tiersOf(o).map(t=>`Buy ${t.buy} get ${t.free} free`).join(" · "):o.type==="pct"?`${o.pct}% OFF on ${scopeText(o)}`:o.type==="list"?`${o.title||"Special combo"} @ ₹${o.price}`:`Buy any ${o.count} pairs @ ₹${o.price}`;
+const offerTitle=o=>o.type==="free"?tiersOf(o).map(tierText).join(" · "):o.type==="pct"?`${o.pct}% OFF on ${scopeText(o)}`:o.type==="list"?`${o.title||"Special combo"} @ ₹${o.price}`:`Buy any ${o.count} pairs @ ₹${o.price}`;
 const isLive=o=>o&&o.active&&(o.type==="pct"?(+o.pct>0&&+o.pct<=100):o.type==="free"?(o.tiers||[]).length>0:(o.price&&(o.type==="list"?((o.items||"").trim()||Object.keys(o.picks||{}).length):o.count)))&&(!o.ends_at||new Date(o.ends_at)>new Date());
 const comboLines=o=>(o.items||"").split("\n").map(x=>x.trim()).filter(Boolean);
 function renderOffer(){
@@ -791,8 +815,8 @@ function editOffer(){
   const sc=o.scope||"all",fsc=o.type==="free"?(o.scope||"guppy"):"guppy",tl=(o.tiers&&o.tiers.length)?o.tiers:[{buy:5,free:1},{buy:10,free:2}];
   const freeOpts=`<option value="all"${fsc==="all"?" selected":""}>All products</option>`+CATS.map(c=>`<option value="${c.k}"${fsc===c.k?" selected":""}>${esc(c.label)}</option>`).join("")+`<option value="items"${fsc==="items"?" selected":""}>Selected items only</option>`;
   const bilist=grp(p=>`<label style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><input class="bi" data-id="${p.id}" type="checkbox" ${(o.buyIds||[]).includes(p.id)?"checked":""}><span>${esc(p.name)}</span></label>`);
-  const gilist=grp(p=>`<label style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><input class="gi" data-id="${p.id}" type="checkbox" ${(o.giftIds||[]).includes(p.id)?"checked":""}><span>${esc(p.name)}</span></label>`);
-  const trows=[0,1,2].map(i=>{const t=tl[i]||{};return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">Buy <input class="tb" type="number" min="1" value="${t.buy||""}" style="width:64px"> pairs, get <input class="tf" type="number" min="1" value="${t.free||""}" style="width:64px"> free</div>`;}).join("");
+
+  const trows=[0,1,2].map(i=>{const t=tl[i]||{};const gsel=(t.gifts&&t.gifts.length)?t.gifts:(o.giftIds||[]);const gl=grp(p=>`<label style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><input class="gi" data-t="${i}" data-id="${p.id}" type="checkbox" ${gsel.includes(p.id)?"checked":""}><span>${esc(p.name)}</span></label>`);return `<div style="border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:8px;margin-bottom:8px"><div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px">Buy <input class="tb" type="number" min="1" value="${t.buy||""}" style="width:56px"> pairs, get <input class="tf" type="number" min="0" value="${t.free||""}" style="width:56px"> free, delivery <input class="td" type="number" min="0" max="100" value="${t.del||""}" style="width:56px"> % off</div><details style="margin-top:8px"><summary style="cursor:pointer;font-weight:700">🎁 Choose free gifts for this level</summary>${gl}<textarea class="gt" data-t="${i}" rows="2" placeholder="Other free gifts (optional), one per line" style="margin-top:6px;padding:10px;border-radius:8px;border:none;font-size:1rem;width:100%">${esc(t.text||o.giftText||"")}</textarea></details></div>`;}).join("");
   const scopeOpts=`<option value="all"${sc==="all"?" selected":""}>All products</option>`+CATS.map(c=>`<option value="${c.k}"${sc===c.k?" selected":""}>Only ${esc(c.label)}</option>`).join("")+`<option value="items"${sc==="items"?" selected":""}>Selected items only</option>`;
   modal(`<h3>Offer / Combo</h3>
   <label><input id="oa" type="checkbox" ${o.active?"checked":""}> Show offer on first page</label>
@@ -806,9 +830,7 @@ function editOffer(){
     <div id="opi"><p style="font-size:.85rem;margin:4px 0">Tick the items that get the discount:</p>${ilist}</div></div>
   <div id="ofree"><p style="font-size:.85rem;margin:4px 0">Customer must buy from:</p><select id="osf" onchange="togOffer()">${freeOpts}</select>
     <div id="obi"><p style="font-size:.85rem;margin:4px 0">Tick the items that count:</p>${bilist}</div>
-    <p style="font-size:.85rem;margin:8px 0 4px">Offer levels (leave a row empty to skip it):</p>${trows}
-    <p style="font-size:.85rem;margin:10px 0 4px">🎁 Free gift: tick the products you give free (customer picks from these):</p>${gilist}
-    <textarea id="ogt" rows="2" placeholder="Other free gifts (optional), one per line" style="margin-top:6px;padding:10px;border-radius:8px;border:none;font-size:1rem;width:100%">${esc(o.giftText)}</textarea></div>
+    <p style="font-size:.85rem;margin:8px 0 4px">Offer levels (leave a row empty to skip it). Delivery % is optional. Open "Choose free gifts" in each level and tick the products you give free at that level:</p>${trows}</div>
   <div id="oprw"><input id="opr" type="number" placeholder="Combo price ₹" value="${o.price||""}"></div>
   <input id="ot" placeholder="Timing, e.g. Today 6 PM - 9 PM" value="${esc(o.timing)}">
   <label>Auto-hide after (optional):<input id="oe" type="datetime-local" value="${end}"></label>
@@ -831,13 +853,14 @@ async function saveOffer(){
   document.querySelectorAll(".pi").forEach(i=>{if(i.checked)ids.push(i.dataset.id);});
   const buyIds=[],giftIds=[];
   document.querySelectorAll(".bi").forEach(i=>{if(i.checked)buyIds.push(i.dataset.id);});
-  document.querySelectorAll(".gi").forEach(i=>{if(i.checked)giftIds.push(i.dataset.id);});
+
   const tf=document.querySelectorAll(".tf");
-  document.querySelectorAll(".tb").forEach((i,k)=>{const b=+i.value,f=+tf[k].value;if(b>0&&f>0)tiers.push({buy:b,free:f});});
+  const td=document.querySelectorAll(".td");
+  document.querySelectorAll(".tb").forEach((i,k)=>{const b=+i.value,f=+tf[k].value||0,d=Math.min(100,Math.max(0,+td[k].value||0));const gifts=[...document.querySelectorAll('.gi[data-t="'+k+'"]')].filter(x=>x.checked).map(x=>x.dataset.id),gt=document.querySelector('.gt[data-t="'+k+'"]');if(b>0&&(f>0||d>0))tiers.push({buy:b,free:f,del:d,gifts,text:gt?gt.value:""});});
   const type=g("oty").value,pct=+g("opc").value;
   if(type==="pct"&&(!(pct>0)||pct>100)){alert("Enter a discount between 1 and 100");return;}
-  if(type==="free"&&!tiers.length){alert("Fill at least one row: Buy N pairs, get M free");return;}
-  OFFER={active:g("oa").checked,type,count:+g("oc").value||3,price:+g("opr").value,title:g("oti").value.trim(),picks,items:g("oit").value,pct,tiers,buyIds,giftIds,giftText:g("ogt").value,scope:type==="free"?g("osf").value:g("osc").value,ids,timing:g("ot").value.trim(),ends_at:e?new Date(e).toISOString():null};
+  if(type==="free"&&!tiers.length){alert("Fill at least one row: Buy N pairs, then free pairs and/or delivery % off");return;}
+  OFFER={active:g("oa").checked,type,count:+g("oc").value||3,price:+g("opr").value,title:g("oti").value.trim(),picks,items:g("oit").value,pct,tiers,buyIds,scope:type==="free"?g("osf").value:g("osc").value,ids,timing:g("ot").value.trim(),ends_at:e?new Date(e).toISOString():null};
   try{await saveAll();}catch(x){alert(x.message);}closeModal();refresh();
 }
 setInterval(renderOffer,60000);
