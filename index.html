@@ -72,7 +72,9 @@
   .stick{padding-bottom:12px}
   .stick header{margin:0}
   .stick .ptitle{margin-bottom:8px}
-  body.admin .sbar,body.admin .stick{top:76px}
+  body.admin .sbar,body.admin .stick{top:var(--abh,76px)}
+  .screen:not(#home){padding-top:0}
+  body.admin .screen:not(#home){padding-top:var(--abh,76px)}
   .sbar .back{font-size:1.3rem;padding:8px 14px;line-height:1}
   .sbar input[type=search]{flex:1;min-width:0;padding:11px 16px;border-radius:22px;border:none;font-size:1rem;background:#fff;color:#04202b;text-shadow:none}
   .ptitle{text-align:center;font-size:1.4rem;margin-bottom:12px}
@@ -609,7 +611,8 @@ function logoTap(){taps++;clearTimeout(tapT);tapT=setTimeout(()=>taps=0,1500);if
 function modal(h){g("mbox").innerHTML=h;g("modal").classList.add("open");}
 function closeModal(){g("modal").classList.remove("open");}
 function toast(t){const e=document.createElement("div");e.textContent=t;e.style.cssText="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:10px;z-index:99;text-align:center;max-width:90vw";document.body.appendChild(e);setTimeout(()=>e.remove(),4000);}
-function setAdmin(v){admin=v;document.body.classList.toggle("admin",v);refresh();}
+function setAdmin(v){admin=v;document.body.classList.toggle("admin",v);document.documentElement.style.setProperty("--abh",(v?g("adminbar").offsetHeight:0)+"px");refresh();}
+window.addEventListener("resize",()=>{if(admin)document.documentElement.style.setProperty("--abh",g("adminbar").offsetHeight+"px");});
 function refresh(){rebuild();Object.keys(cart).forEach(id=>{if(!find(id))delete cart[id];});updateBadge();if(g("list").classList.contains("active"))renderGrid();if(g("detail").classList.contains("active"))renderDetail();renderCats();applyLogo();renderOffer();}
 function applyData(d){if(d&&d.products){PRODUCTS=Object.assign({guppy:[],otherfish:[],food:[],medicine:[],accessory:[]},d.products);Object.values(PRODUCTS).flat().forEach(p=>{if(p.mtype==="video"&&!p.video){p.video=p.image;p.image="";}});}OFFER=(d&&d.offer)||null;CATSTAT=(d&&d.catStatus)||{};LOGO=(d&&d.logo)||"";if(d&&d.categories&&d.categories.length)CATS=d.categories;syncCats();CATS.forEach(c=>{PRODUCTS[c.k]=PRODUCTS[c.k]||[];});refresh();}
 async function loadPublic(){try{const r=await fetch("data.json?"+Date.now());if(r.ok)applyData(await r.json());}catch(e){}}
