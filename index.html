@@ -468,6 +468,11 @@ function renderCart(){
     return `<div class="row"><div><strong>${p.name}</strong><br><small>₹${unit(p)} × ${q} ${p.unit}${q>1?"s":""}</small></div>
       <div class="qty" style="gap:8px"><button onclick="change('${id}',-1)">−</button><span>${q}</span><button onclick="change('${id}',1)">+</button></div></div>`;
   }).join("");
+  const bn=bonus();
+  if(bn){
+    if(bn.hit) h+=`<div class="row"><div><strong>🎁 FREE: ${bn.hit.free} pair${bn.hit.free>1?"s":""}</strong><br><small>Buy ${bn.hit.buy}+ offer – bonus added by the farm</small></div></div>`;
+    if(bn.next) h+=`<div class="row"><small>💡 Add ${bn.next.buy-bn.n} more pair(s) to get ${bn.next.free} pair${bn.next.free>1?"s":""} FREE!</small></div>`;
+  }
   box.innerHTML=h;
   document.getElementById("total").textContent="Total: ₹"+total();
   const gp=pairs(), needMore=gp>0 && gp<MIN_PAIRS;
@@ -492,6 +497,7 @@ function sendOrder(){
     if(Object.keys(cart).length) msg+="*Other items*\n";
   }
   Object.entries(cart).forEach(([id,q])=>{const p=find(id); msg += `• ${p.name} – ${q} ${p.unit}${q>1?"s":""} (₹${unit(p)*q})\n`;});
+  const bq=bonus(); if(bq&&bq.hit) msg+=`\n🎁 *FREE BONUS:* ${bq.hit.free} pair${bq.hit.free>1?"s":""} (Buy ${bq.hit.buy} offer)\n`;
   msg += `\nTotal: ₹${total()}\n\n*Customer details*\nName: ${name}\nAddress: ${addr}\nPhone: ${phone}\nPincode: ${pin}\n\nPlease confirm availability and delivery details.`;
   window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`,"_blank");
 }
@@ -683,16 +689,25 @@ async function deleteItem(id){
 async function toggleStock(id){const p=real(id);p.out=!p.out;refresh();try{await saveAll();}catch(e){alert(e.message);}}
 const pctApplies=p=>{const o=OFFER;return !!(o&&o.type==="pct"&&isLive(o)&&(o.scope==="all"||o.scope===p.type||(o.scope==="items"&&(o.ids||[]).includes(p.id))));};
 const unit=p=>pctApplies(p)?Math.round(p.price*(100-(+OFFER.pct))/100):p.price;
-const priceHTML=p=>{const d=unit(p);return d<p.price?`<s style="opacity:.7">₹${p.price}</s> ₹${d} / ${p.unit} <small>(${OFFER.pct}% off)</small>`:`₹${p.price} / ${p.unit}`;};
+const priceHTML=p=>{const d=unit(p);return d<p.price?`<s style="opacity:.7">₹${p.price}</s> <b style="color:#7ff5e6">₹${d}</b> / ${p.unit} <small>(${OFFER.pct}% off)</small>`:`₹${p.price} / ${p.unit}`;};
+const offerRow=(x,k)=>`<div onclick="openDetail('${x.id}')" style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.15);cursor:pointer"><span>${esc(x.name)}</span><span style="text-align:right">${priceHTML({...x,type:k})}</span></div>`;
+const tiersOf=o=>(o.tiers||[]).slice().sort((a,b)=>a.buy-b.buy);
+function bonus(){
+  const o=OFFER; if(!o||o.type!=="free"||!isLive(o)) return null;
+  const n=Object.entries(cart).reduce((s,[id,q])=>{const p=find(id);return s+(p&&(o.scope==="all"||o.scope===p.type)?q:0);},0);
+  let hit=null,next=null;
+  tiersOf(o).forEach(t=>{if(n>=t.buy)hit=t;else if(!next)next=t;});
+  return {n,hit,next};
+}
 const qlab=(p,q)=>`${q} ${p.unit}${q>1?"s":""}`;
 const scopeText=o=>o.scope==="all"?"everything":o.scope==="items"?"selected items":((CATS.find(c=>c.k===o.scope)||{}).label||"selected items");
-const offerTitle=o=>o.type==="pct"?`${o.pct}% OFF on ${scopeText(o)}`:o.type==="list"?`${o.title||"Special combo"} @ ₹${o.price}`:`Buy any ${o.count} pairs @ ₹${o.price}`;
-const isLive=o=>o&&o.active&&(o.type==="pct"?(+o.pct>0&&+o.pct<=100):(o.price&&(o.type==="list"?((o.items||"").trim()||Object.keys(o.picks||{}).length):o.count)))&&(!o.ends_at||new Date(o.ends_at)>new Date());
+const offerTitle=o=>o.type==="free"?tiersOf(o).map(t=>`Buy ${t.buy} get ${t.free} free`).join(" · "):o.type==="pct"?`${o.pct}% OFF on ${scopeText(o)}`:o.type==="list"?`${o.title||"Special combo"} @ ₹${o.price}`:`Buy any ${o.count} pairs @ ₹${o.price}`;
+const isLive=o=>o&&o.active&&(o.type==="pct"?(+o.pct>0&&+o.pct<=100):o.type==="free"?(o.tiers||[]).length>0:(o.price&&(o.type==="list"?((o.items||"").trim()||Object.keys(o.picks||{}).length):o.count)))&&(!o.ends_at||new Date(o.ends_at)>new Date());
 const comboLines=o=>(o.items||"").split("\n").map(x=>x.trim()).filter(Boolean);
 function renderOffer(){
   const o=OFFER,live=isLive(o);
   g("offerLane").classList.toggle("on",!!live);
-  if(live)g("banner").innerHTML=`<b>🎉 ${esc(o.type==="list"?"COMBO OFFER":(o.title||(o.type==="pct"?"SALE":"COMBO OFFER")))}</b>${esc(offerTitle(o))}${o.timing?`<br>⏰ ${esc(o.timing)}`:""}<br><u>👆 Tap to view</u>`;
+  if(live)g("banner").innerHTML=`<b>🎉 ${esc(o.type==="list"?"COMBO OFFER":(o.title||(o.type==="pct"?"SALE":o.type==="free"?"FREE PAIRS":"COMBO OFFER")))}</b>${esc(offerTitle(o))}${o.timing?`<br>⏰ ${esc(o.timing)}`:""}<br><u>👆 Tap to view</u>`;
   if(g("list").classList.contains("active"))renderGrid();
 }
 // ---- customer combo page ----
@@ -710,10 +725,12 @@ function renderCombo(){
   const o=OFFER;
   let h=`<div class="row" style="flex-direction:column;text-align:center"><strong style="font-size:1.1rem">${esc(offerTitle(o))}</strong>${o.timing?`<small>⏰ ${esc(o.timing)}</small>`:""}</div>`;
   const btn=dis=>`<button ${dis?"disabled":""} style="width:100%;margin-top:14px;background:#25d366;color:#04301a" onclick="addComboToCart()">🛒 Add combo to cart</button>`;
+  const shop=`<button style="width:100%;margin-top:14px" onclick="show('categories')">🛍 Shop now</button>`;
   if(o.type==="pct"){
-    const names=o.scope==="all"?[]:all.filter(pctApplies).map(x=>x.name);
-    h+=`<div class="row" style="flex-direction:column;align-items:flex-start;gap:6px"><div>Get <b>${o.pct}% OFF</b> on ${esc(scopeText(o))}.</div>${names.map(x=>`<div>• ${esc(x)}</div>`).join("")}<small>The discount is applied automatically in your cart.</small></div>`;
-    h+=`<button style="width:100%;margin-top:14px" onclick="show('categories')">🛍 Shop now</button>`;
+    const groups=CATS.map(c=>{const it=(PRODUCTS[c.k]||[]).filter(x=>pctApplies({...x,type:c.k}));return it.length?`<div style="font-weight:700;margin:12px 0 2px">${c.icon} ${esc(c.label)}</div>`+it.map(x=>offerRow(x,c.k)).join(""):"";}).join("");
+    h+=`<div class="row" style="flex-direction:column;align-items:stretch;gap:0;padding:4px 14px 10px">${groups}</div><p class="sub" style="text-align:center;margin:8px">Discount is applied automatically in your cart · tap an item to view</p>`+shop;
+  }else if(o.type==="free"){
+    h+=`<div class="row" style="flex-direction:column;align-items:stretch;gap:8px">${tiersOf(o).map(t=>`<div style="display:flex;justify-content:space-between;gap:10px"><span>Buy ${t.buy} pairs</span><b>Get ${t.free} pair${t.free>1?"s":""} FREE 🎁</b></div>`).join("")}<small>Applies to ${esc(scopeText(o))}. Your free pair is added automatically to your order.</small></div>`+shop;
   }else if(o.type==="list"){
     h+=`<div class="grid">`+pickLines(o).map(({id,q})=>comboCard(find(id),"cview",`<span class="price">${qlab(find(id),q)}</span>`,"")).join("")+`</div>`;
     const extra=comboLines(o);
@@ -730,7 +747,7 @@ function renderCombo(){
 function addComboToCart(){
   const o=OFFER; if(!isLive(o)) return;
   let lines;
-  if(o.type==="pct") return;
+  if(o.type==="pct"||o.type==="free") return;
   if(o.type==="list") lines=pickLines(o).map(({id,q})=>`${find(id).name} – ${qlab(find(id),q)}`).concat(comboLines(o));
   else{
     if(comboCount()!==+o.count) return;
@@ -745,18 +762,22 @@ function editOffer(){
   const grp=f=>CATS.map(c=>`<p style="font-size:.85rem;margin:8px 0 2px;font-weight:700">${c.icon} ${esc(c.label)}</p>`+(PRODUCTS[c.k]||[]).map(f).join("")).join("");
   const plist=grp(p=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><input class="pk" data-id="${p.id}" type="number" min="0" value="${picks[p.id]||0}" style="width:64px"><span>${esc(p.name)} (${esc(p.unit)})</span></div>`);
   const ilist=grp(p=>`<label style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><input class="pi" data-id="${p.id}" type="checkbox" ${ids.includes(p.id)?"checked":""}><span>${esc(p.name)}</span></label>`);
-  const sc=o.scope||"all";
+  const sc=o.scope||"all",fsc=o.type==="free"?(o.scope||"guppy"):"guppy",tl=(o.tiers&&o.tiers.length)?o.tiers:[{buy:5,free:1},{buy:10,free:2}];
+  const freeOpts=`<option value="all"${fsc==="all"?" selected":""}>All products</option>`+CATS.map(c=>`<option value="${c.k}"${fsc===c.k?" selected":""}>${esc(c.label)}</option>`).join("");
+  const trows=[0,1,2].map(i=>{const t=tl[i]||{};return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">Buy <input class="tb" type="number" min="1" value="${t.buy||""}" style="width:64px"> pairs, get <input class="tf" type="number" min="1" value="${t.free||""}" style="width:64px"> free</div>`;}).join("");
   const scopeOpts=`<option value="all"${sc==="all"?" selected":""}>All products</option>`+CATS.map(c=>`<option value="${c.k}"${sc===c.k?" selected":""}>Only ${esc(c.label)}</option>`).join("")+`<option value="items"${sc==="items"?" selected":""}>Selected items only</option>`;
   modal(`<h3>Offer / Combo</h3>
   <label><input id="oa" type="checkbox" ${o.active?"checked":""}> Show offer on first page</label>
   <input id="oti" placeholder="Offer name, e.g. Diwali Sale (optional)" value="${esc(o.title)}">
-  <select id="oty" onchange="togOffer()"><option value="any"${(o.type!=="list"&&o.type!=="pct")?" selected":""}>Buy any N guppy pairs @ price</option><option value="list"${o.type==="list"?" selected":""}>Custom combo: I choose products + quantities @ price</option><option value="pct"${o.type==="pct"?" selected":""}>Percentage discount (10% off, 20% off...)</option></select>
+  <select id="oty" onchange="togOffer()"><option value="any"${(o.type!=="list"&&o.type!=="pct"&&o.type!=="free")?" selected":""}>Buy any N guppy pairs @ price</option><option value="list"${o.type==="list"?" selected":""}>Custom combo: I choose products + quantities @ price</option><option value="pct"${o.type==="pct"?" selected":""}>Percentage discount (10% off, 20% off...)</option><option value="free"${o.type==="free"?" selected":""}>Buy more, get free pairs (e.g. buy 5 get 1 free)</option></select>
   <div id="oany"><input id="oc" type="number" placeholder="How many pairs (e.g. 3)" value="${o.count||3}"></div>
   <div id="olist"><p style="font-size:.85rem;margin:4px 0">Products included (type how many; 0 = not included):</p>${plist}
     <textarea id="oit" rows="3" placeholder="Other items / gifts (optional), one per line" style="margin-top:6px;padding:10px;border-radius:8px;border:none;font-size:1rem;width:100%">${esc(o.items)}</textarea></div>
   <div id="opct"><input id="opc" type="number" min="1" max="100" placeholder="Discount % (e.g. 10, 15, 100)" value="${o.pct||""}">
     <select id="osc" onchange="togOffer()" style="margin-top:8px">${scopeOpts}</select>
     <div id="opi"><p style="font-size:.85rem;margin:4px 0">Tick the items that get the discount:</p>${ilist}</div></div>
+  <div id="ofree"><p style="font-size:.85rem;margin:4px 0">Free pairs apply when buying from:</p><select id="osf">${freeOpts}</select>
+    <p style="font-size:.85rem;margin:8px 0 4px">Offer levels (leave a row empty to skip it):</p>${trows}</div>
   <div id="oprw"><input id="opr" type="number" placeholder="Combo price ₹" value="${o.price||""}"></div>
   <input id="ot" placeholder="Timing, e.g. Today 6 PM - 9 PM" value="${esc(o.timing)}">
   <label>Auto-hide after (optional):<input id="oe" type="datetime-local" value="${end}"></label>
@@ -768,16 +789,20 @@ function togOffer(){
   g("oany").style.display=t==="any"?"block":"none";
   g("olist").style.display=t==="list"?"block":"none";
   g("opct").style.display=t==="pct"?"block":"none";
-  g("oprw").style.display=t==="pct"?"none":"block";
+  g("ofree").style.display=t==="free"?"block":"none";
+  g("oprw").style.display=(t==="pct"||t==="free")?"none":"block";
   g("opi").style.display=(t==="pct"&&g("osc").value==="items")?"block":"none";
 }
 async function saveOffer(){
-  const e=g("oe").value,picks={},ids=[];
+  const e=g("oe").value,picks={},ids=[],tiers=[];
   document.querySelectorAll(".pk").forEach(i=>{const q=+i.value;if(q>0)picks[i.dataset.id]=q;});
   document.querySelectorAll(".pi").forEach(i=>{if(i.checked)ids.push(i.dataset.id);});
+  const tf=document.querySelectorAll(".tf");
+  document.querySelectorAll(".tb").forEach((i,k)=>{const b=+i.value,f=+tf[k].value;if(b>0&&f>0)tiers.push({buy:b,free:f});});
   const type=g("oty").value,pct=+g("opc").value;
   if(type==="pct"&&(!(pct>0)||pct>100)){alert("Enter a discount between 1 and 100");return;}
-  OFFER={active:g("oa").checked,type,count:+g("oc").value||3,price:+g("opr").value,title:g("oti").value.trim(),picks,items:g("oit").value,pct,scope:g("osc").value,ids,timing:g("ot").value.trim(),ends_at:e?new Date(e).toISOString():null};
+  if(type==="free"&&!tiers.length){alert("Fill at least one row: Buy N pairs, get M free");return;}
+  OFFER={active:g("oa").checked,type,count:+g("oc").value||3,price:+g("opr").value,title:g("oti").value.trim(),picks,items:g("oit").value,pct,tiers,scope:type==="free"?g("osf").value:g("osc").value,ids,timing:g("ot").value.trim(),ends_at:e?new Date(e).toISOString():null};
   try{await saveAll();}catch(x){alert(x.message);}closeModal();refresh();
 }
 setInterval(renderOffer,60000);
