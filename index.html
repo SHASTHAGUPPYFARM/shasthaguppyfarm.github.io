@@ -102,7 +102,12 @@
   .mbox{background:#0a3d5c;border-radius:14px;padding:18px;width:100%;max-width:380px;display:flex;flex-direction:column;gap:10px;max-height:90vh;overflow:auto}
   .mbox input:not([type=checkbox]),.mbox select{padding:10px;border-radius:8px;border:none;font-size:1rem;width:100%}
   .mrow{display:flex;gap:8px}.mrow button{flex:1}
-  .lane{display:none;position:absolute;left:0;right:0;top:6%;height:110px;overflow:hidden;pointer-events:none}
+  .lane{display:none;position:absolute;left:0;right:0;top:0;overflow:hidden;cursor:pointer;z-index:5;background:linear-gradient(90deg,#ffb347,#ffd166,#ffb347);color:#4a2b00;text-shadow:none;font-weight:700;font-size:.95rem;border-bottom:2px solid #e8a317;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+  body.admin .lane{top:76px}
+  .mq{display:flex;width:max-content;padding:9px 0;animation:mqk 40s linear infinite}
+  .mqh{display:flex;flex:none}
+  .mqs{white-space:nowrap;padding-right:60px}
+  @keyframes mqk{from{transform:translateX(0)}to{transform:translateX(-50%)}}
   .lane.on{display:block}
   .tow{pointer-events:auto;cursor:pointer;position:absolute;left:0;top:8px;animation:tow 20s linear infinite}
   @keyframes tow{from{transform:translateX(-100%)}to{transform:translateX(100vw)}}
@@ -156,10 +161,7 @@
 
 <!-- HOME -->
 <div id="home" class="screen active">
-  <div class="lane" id="offerLane"><div class="tow" onclick="openCombo()"><div class="tow-in">
-    <div class="ban" id="banner"></div><div class="rope"></div>
-    <svg class="tf" viewBox="0 0 60 30" width="58" style="overflow:visible"><path class="tail" d="M20 15L2 3L7 15L2 27Z" fill="#ffb347" opacity=".85"/><path d="M16 15C24 2 47 2 58 15C47 28 24 28 16 15Z" fill="#ffb347"/><path d="M26 6Q34 0 40 6" fill="#ff9a1f"/><circle cx="50" cy="13" r="2.2" fill="#fff"/><circle cx="50.6" cy="13" r="1" fill="#023"/></svg>
-  </div></div></div>
+  <div class="lane" id="offerLane" onclick="openCombo()"><div class="mq" id="mq"></div></div>
   <img class="logo" src="logo.jpg" alt="Shastha Guppy Farm logo" onclick="logoTap()">
   <button class="adm" id="logoEdit" onclick="editLogo()">✏️ Edit logo</button>
   <h1 class="welcome">Welcome to Shastha Guppy Farm</h1>
@@ -707,13 +709,21 @@ const comboLines=o=>(o.items||"").split("\n").map(x=>x.trim()).filter(Boolean);
 function renderOffer(){
   const o=OFFER,live=isLive(o);
   g("offerLane").classList.toggle("on",!!live);
-  if(live)g("banner").innerHTML=`<b>🎉 ${esc(o.type==="list"?"COMBO OFFER":(o.title||(o.type==="pct"?"SALE":o.type==="free"?"FREE PAIRS":"COMBO OFFER")))}</b>${esc(offerTitle(o))}${o.timing?`<br>⏰ ${esc(o.timing)}`:""}<br><u>👆 Tap to view</u>`;
+  if(live){
+    const head=o.type==="list"?"COMBO OFFER":(o.title||(o.type==="pct"?"SALE":o.type==="free"?"FREE PAIRS":"COMBO OFFER"));
+    const t=`🎉 ${head}: ${offerTitle(o)}${o.timing?`  ⏰ ${o.timing}`:""}  👆 Tap to view`;
+    if(g("mq").dataset.t!==t){
+      const half=`<span class="mqs">${esc(t)}</span>`.repeat(6);
+      g("mq").innerHTML=`<div class="mqh">${half}</div><div class="mqh">${half}</div>`;
+      g("mq").dataset.t=t;
+    }
+  }
   if(g("list").classList.contains("active"))renderGrid();
 }
 // ---- customer combo page ----
 let comboSel={};
 const comboCount=()=>Object.values(comboSel).reduce((a,b)=>a+b,0);
-function openCombo(){if(!isLive(OFFER))return;comboSel={};renderCombo();show("combo");}
+function openCombo(){if(!isLive(OFFER))return;if(OFFER.type==="pct"||OFFER.type==="free"){show("categories");return;}comboSel={};renderCombo();show("combo");}
 function comboRemove(id){delete comboSel[id];renderCombo();}
 const pickLines=o=>Object.entries(o.picks||{}).filter(([id,q])=>q>0&&find(id)).map(([id,q])=>({id,q}));
 function comboCard(p,mode,label,badge){
