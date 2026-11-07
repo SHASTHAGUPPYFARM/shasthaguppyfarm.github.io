@@ -75,8 +75,23 @@
   body.admin .sbar,body.admin .stick{top:var(--abh,76px)}
   .screen:not(#home){padding-top:0}
   body.admin .screen:not(#home){padding-top:var(--abh,76px)}
-  .sbar .back{font-size:1.3rem;padding:8px 14px;line-height:1}
-  .sbar input[type=search]{flex:1;min-width:0;padding:11px 16px;border-radius:22px;border:none;font-size:1rem;background:#fff;color:#04202b;text-shadow:none}
+  .sbar .back,.stick .back{font-size:1.4rem;padding:8px 14px;line-height:1}
+  .stick .back,.stick .cartbtn{height:48px;min-width:48px;border-radius:24px}
+  .stick header{gap:8px}
+  .stick input[type=search],.sbar input[type=search]{flex:1;min-width:0;height:48px;padding:0 20px;border-radius:999px;border:2px solid #7fe0f5;font-size:1.05rem;background:#fff;color:#04202b;text-shadow:none;outline:none;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+  .stick input[type=search]:focus{border-color:#19c3b1}
+  /* swipe gallery */
+  .car{margin-bottom:10px}
+  .cw{position:relative}
+  .cs{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;border-radius:14px;scrollbar-width:none;background:rgba(6,50,75,.4)}
+  .cs::-webkit-scrollbar{display:none}
+  .cslide{flex:0 0 100%;scroll-snap-align:center;height:340px}
+  .cslide img,.cslide video{width:100%;height:100%;object-fit:cover;display:block}
+  .cnav{position:absolute;top:50%;transform:translateY(-50%);width:38px;height:38px;border-radius:50%;padding:0;font-size:1.5rem;line-height:1;background:rgba(0,0,0,.45);color:#fff;z-index:2}
+  .cnav.l{left:8px}.cnav.r{right:8px}
+  .dots{display:flex;justify-content:center;gap:6px;margin-top:8px}
+  .dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.4)}
+  .dots i.on{background:#fff}
   .ptitle{text-align:center;font-size:1.4rem;margin-bottom:12px}
   .back{background:rgba(6,50,75,.45);color:var(--text);padding:8px 12px;border:1px solid var(--muted)}
   .cartbtn{position:relative;background:var(--card);color:var(--text);padding:10px 14px}
@@ -343,10 +358,17 @@ function openList(type){
   document.getElementById("listTitle").textContent = TITLES[type]; g("srch").value="";
   renderGrid(); show("list");
 }
+const mediaOf=p=>(p.media&&p.media.length)?p.media:[...(p.image?[{type:"image",src:p.image}]:[]),...(p.video?[{type:"video",src:p.video}]:[])];
 function mediaHTML(p,type){
-  if(p.image) return `<img src="${p.image}" alt="${esc(p.name)}">`;
-  if(p.video) return `<video src="${p.video}#t=0.1" muted playsinline preload="metadata"></video>`;
-  return EMOJI[type];
+  const m=mediaOf(p)[0]; if(!m) return EMOJI[type];
+  if(m.type==="video") return `<video src="${m.src}#t=0.1" muted playsinline preload="metadata"></video>`;
+  return `<img src="${m.src}" alt="${esc(p.name)}">`;
+}
+function carGo(d){const c=document.getElementById("cs");c.scrollBy({left:d*c.clientWidth,behavior:"smooth"});}
+function carDots(el){
+  const n=Math.round(el.scrollLeft/el.clientWidth);
+  document.querySelectorAll("#dots i").forEach((d,i)=>d.classList.toggle("on",i===n));
+  [...el.children].forEach((sl,i)=>{const v=sl.querySelector("video");if(v&&i!==n)v.pause();});
 }
 function renderGrid(){
   const qs=((document.getElementById("srch")||{}).value||"").trim().toLowerCase();
@@ -383,9 +405,8 @@ function renderDetail(){
   const p=find(detailId); if(!p){detailBack();return;}
   const m=detailMode;
   document.getElementById("dTitle").textContent=m==="shop"?TITLES[p.type]:"🎉 Combo Offer";
-  const img=p.image?`<img class="dmedia" src="${p.image}" alt="${esc(p.name)}">`:"";
-  const vid=p.video?`<video class="dmedia" src="${p.video}" controls playsinline preload="metadata"></video>`:"";
-  const none=(!img&&!vid)?`<div class="dmedia dnone">${EMOJI[p.type]}</div>`:"";
+  const ms=mediaOf(p);
+  const car=ms.length?`<div class="car"><div class="cw"><div class="cs" id="cs" onscroll="carDots(this)">${ms.map(m=>`<div class="cslide">${m.type==="video"?`<video src="${m.src}" controls playsinline preload="metadata"></video>`:`<img src="${m.src}" alt="${esc(p.name)}">`}</div>`).join("")}</div>${ms.length>1?`<button class="cnav l" aria-label="Previous" onclick="carGo(-1)">‹</button><button class="cnav r" aria-label="Next" onclick="carGo(1)">›</button>`:""}</div>${ms.length>1?`<div class="dots" id="dots">${ms.map((_,i)=>`<i class="${i?"":"on"}"></i>`).join("")}</div>`:""}</div>`:`<div class="dmedia dnone">${EMOJI[p.type]}</div>`;
   const adm=admin?`<div class="mrow" style="margin-top:14px"><button class="adm" onclick="editItem('${p.id}')">✏️ Edit</button><button class="adm" onclick="toggleStock('${p.id}')">${p.out?"Mark in stock":"Mark out of stock"}</button></div>`:"";
   const qty=`<div class="qty" style="max-width:180px;margin:14px 0"><button onclick="dQty(-1)">−</button><span id="dq">${detailQty}</span><button onclick="dQty(1)">+</button></div>`;
   let ctl="";
@@ -394,7 +415,7 @@ function renderDetail(){
     comboLeft()<=0?`<div class="warn" style="display:block;margin-top:14px">Your combo is full. Remove a pair on the combo page to change it.</div>`:
     `<p class="sub" style="margin-top:10px">Pairs left to choose: ${comboLeft()}</p>`+qty+`<button id="addBtn" style="width:100%" onclick="addToCombo()">➕ Add to combo</button>`;
   else ctl=`<div class="row" style="margin-top:14px">Included in this combo: ${(OFFER.picks||{})[p.id]||1} ${p.unit}(s)</div>`;
-  document.getElementById("dBody").innerHTML=`<div class="dwrap">${img}${vid}${none}
+  document.getElementById("dBody").innerHTML=`<div class="dwrap">${car}
     <h2 style="margin:12px 0 4px">${esc(p.name)}</h2>${m==="shop"?`<div class="price" style="font-size:1.3rem">${priceHTML(p)}</div>`:""}
     ${p.desc?`<p class="sub" style="margin:10px 0">${esc(p.desc)}</p>`:""}${ctl}${adm}</div>`;
 }
@@ -690,24 +711,38 @@ const real=id=>Object.values(PRODUCTS).flat().find(x=>x.id===id);
 function editItem(id,fromPanel){
   const p=id?find(id):{type:current,name:"",price:"",unit:"piece",out:false,desc:""};
   panelCat=fromPanel?(p.type||current):null;
+  editMedia=mediaOf(p).map(x=>({...x}));
   const opts=Object.keys(TITLES).map(k=>`<option value="${k}"${k===p.type?" selected":""}>${TITLES[k]}</option>`).join("");
   modal(`<h3>${id?"Edit item":"Add item"}</h3>
   <input id="mn" placeholder="Name" value="${esc(p.name)}"><input id="mp" type="number" placeholder="Price" value="${p.price}">
   <input id="mu" placeholder="Unit (pair, pack, piece)" value="${esc(p.unit)}"><select id="mc">${opts}</select>
   <textarea id="md" rows="3" placeholder="Description (optional)" style="padding:10px;border-radius:8px;border:none;font-size:1rem;width:100%">${esc(p.desc)}</textarea>
   <label><input id="ms" type="checkbox" ${p.out?"":"checked"}> In stock</label>
-  <label>Photo ${p.image?"(change)":""}:<input id="mf" type="file" accept="image/*"></label>
-  <label>Video ${p.video?"(change)":""}:<input id="mv" type="file" accept="video/*"></label>
+  <p style="font-size:.85rem;margin:4px 0">Photos / videos (the first one shows first; swipe order = list order):</p>
+  <div id="medEd" style="display:flex;flex-direction:column;gap:6px"></div>
+  <label>➕ Add photos / videos (you can pick many):<input id="mf" type="file" accept="image/*,video/*" multiple onchange="addMedia(this)"></label>
   <div class="mrow"><button id="msave" onclick="saveItem(${id?`'${id}'`:"null"})">Save</button><button class="back" onclick="cancelEdit()">Cancel</button></div>
   ${id?`<button class="adm" onclick="deleteItem('${id}')">🗑 Delete item</button>`:""}`);
+  renderMediaEd();
+}
+let editMedia=[];
+function addMedia(inp){
+  [...inp.files].forEach(f=>editMedia.push({type:f.type.startsWith("video/")?"video":"image",file:f,src:URL.createObjectURL(f),pending:true}));
+  inp.value="";renderMediaEd();
+}
+function moveMedia(i,d){const j=i+d;if(j<0||j>=editMedia.length)return;[editMedia[i],editMedia[j]]=[editMedia[j],editMedia[i]];renderMediaEd();}
+function makeFirst(i){editMedia.unshift(editMedia.splice(i,1)[0]);renderMediaEd();}
+function delMedia(i){editMedia.splice(i,1);renderMediaEd();}
+function renderMediaEd(){
+  g("medEd").innerHTML=editMedia.map((m,i)=>`<div style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.08);padding:6px;border-radius:8px">${m.type==="video"?`<video src="${m.src}" muted playsinline preload="metadata" style="width:52px;height:52px;object-fit:cover;border-radius:6px"></video>`:`<img src="${m.src}" style="width:52px;height:52px;object-fit:cover;border-radius:6px">`}<span style="flex:1;font-size:.8rem">${i===0?"⭐ First · ":""}${m.type==="video"?"Video":"Photo"} ${i+1}${m.pending?" (new)":""}</span><button class="adm" onclick="moveMedia(${i},-1)">▲</button><button class="adm" onclick="moveMedia(${i},1)">▼</button><button class="adm" onclick="makeFirst(${i})">⭐</button><button class="adm" onclick="delMedia(${i})">🗑</button></div>`).join("")||"<small>No photos or videos yet</small>";
 }
 async function saveItem(id){
   try{
-    const cur=id?real(id):{};let img=cur.image||"",vid=cur.video||"";
     g("msave").textContent="Saving…";
-    const f=g("mf").files[0],v=g("mv").files[0];
-    if(f)img=await upload(f); if(v)vid=await upload(v);
-    const item={id:id||"p"+Date.now(),name:g("mn").value.trim(),price:+g("mp").value,unit:g("mu").value.trim()||"piece",desc:g("md").value.trim(),image:img,video:vid,out:!g("ms").checked};
+    const media=[];
+    for(const m of editMedia) media.push({type:m.type,src:m.pending?await upload(m.file):m.src});
+    const img=(media.find(x=>x.type==="image")||{}).src||"",vid=(media.find(x=>x.type==="video")||{}).src||"";
+    const item={id:id||"p"+Date.now(),name:g("mn").value.trim(),price:+g("mp").value,unit:g("mu").value.trim()||"piece",desc:g("md").value.trim(),image:img,video:vid,media,out:!g("ms").checked};
     const cat=g("mc").value;let done=false;
     Object.entries(PRODUCTS).forEach(([k,l])=>{const i=l.findIndex(x=>x.id===item.id);if(i>-1){if(k===cat){l[i]=item;done=true;}else l.splice(i,1);}});
     if(!done)(PRODUCTS[cat]=PRODUCTS[cat]||[]).push(item);
